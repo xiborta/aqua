@@ -1,115 +1,111 @@
 package main
 
-import(
-  "fmt"
-  "io/ioutil"
-  "log"
-  "os"
-  "os/exec"
-  "strconv"
-  "strings"
-  "time"
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
 
-  "github.com/dustin/go-coap"
+	"github.com/dustin/go-coap"
+)
 
-  )
-
-
-func check(e error){
-  if e != nil {
-    panic(e)
-  }
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
 
-func loadw1kos(){
-  cmd1 := exec.Command("modprobe", "w1-gpio")
-  err1 := cmd1.Run()
-  check(err1)
-  cmd2 := exec.Command("modprobe", "w1-therm")
-  err2 := cmd2.Run()
-  check(err2)
+func loadw1kos() {
+	cmd1 := exec.Command("modprobe", "w1-gpio")
+	err1 := cmd1.Run()
+	check(err1)
+	cmd2 := exec.Command("modprobe", "w1-therm")
+	err2 := cmd2.Run()
+	check(err2)
 
 }
-
 
 const devicesPath = "/sys/bus/w1/devices/"
 
+func main() {
 
-func main(){
+	var publishingURL string
 
-  var publishingURL string
+	if len(os.Args) > 1 {
+		publishingURL = os.Args[1]
+	}
 
-  if len(os.Args) > 1{
-    publishingURL = os.Args[1]
-  }
+	for {
 
-  for{
+		var deviceIDs []string
 
-    var deviceIDs []string
+		files, err := ioutil.ReadDir(devicesPath)
+		check(err)
+		for _, file := range files {
+			if strings.HasPrefix(file.Name(), "28-") {
+				deviceIDs = append(deviceIDs, file.Name())
+			}
+		}
 
-    files, err := ioutil.ReadDir(devicesPath)
-    check(err)
-    for _, file := range files {
-	if strings.HasPrefix(file.Name(), "28-"){
-	  deviceIDs = append(deviceIDs, file.Name())
-        }
-    }
+		for _, deviceID := range deviceIDs {
+			data, err := ioutil.ReadFile(devicesPath + "/" + deviceID + "/w1_slave")
+			check(err)
 
-    for _, deviceID := range deviceIDs {
-      data, err := ioutil.ReadFile(devicesPath + "/" + deviceID + "/w1_slave")
-      check(err)
+			sample := string(data)
 
-      sample := string(data)
+			if strings.Contains(sample, "NO") {
+				fmt.Print(string(data))
+			} else {
+				pos := strings.Index(sample, "t=")
+				if pos >= 0 {
+					value := sample[pos+2 : pos+5]
+					f, err := strconv.ParseFloat(value, 64)
+					check(err)
+					celsius := f * 0.1
 
-      if strings.Contains(sample, "NO"){
-        fmt.Print(string(data))
-      } else {
-        pos := strings.Index(sample, "t=")
-        if pos >= 0 {
-	  value := sample[pos+2:pos+5]
-	  f, err := strconv.ParseFloat(value, 64)
-	  check(err)
-	  celsius := f * 0.1
+					temp := strconv.FormatFloat(celsius, 'f', 1, 64)
+					if publishingURL != "" {
+						sendMeasure(publishingURL, deviceID, "temperature", temp)
+					} else {
+						fmt.Println(deviceID + ": " + temp + " C")
+					}
+				} else {
+					fmt.Print("cannot read data")
+				}
+			}
+		}
 
-	  temp := strconv.FormatFloat(celsius, 'f', 1, 64)
-	  if publishingURL != ""{
-            sendMeasure(publishingURL, deviceID, "temperature", temp)
-          }else{
-             fmt.Println(deviceID + ": " + temp + " C" ) 
-	  }
-  } else {
-          fmt.Print("cannot read data")
-        }
-      }
-    }
-
-    time.Sleep(time.Second)
-  }
+		time.Sleep(time.Second)
+	}
 }
 
-func sendMeasure(url string, deviceID string, measure string, value string){
+func sendMeasure(url string, deviceID string, measure string, value string) {
 
-  req := coap.Message{
-      Type:      coap.NonConfirmable,
-      Code:      coap.POST,
-      Payload:   []byte(value),
-  }
+	req := coap.Message{
+		Type:    coap.NonConfirmable,
+		Code:    coap.POST,
+		Payload: []byte(value),
+	}
 
-  path := "/aqua/" + deviceID + "/" + measure + "/"
+	path := "/aqua/" + deviceID + "/" + measure + "/"
 
-  req.SetPathString(path)
+	req.SetPathString(path)
 
-  c, err := coap.Dial("udp", url)
-  if err != nil {
-	log.Fatal("Error dialing: %v", err)
-  }
+	c, err := coap.Dial("udp", url)
+	if err != nil {
+		log.Fatal("Error dialing: %v", err)
+	}
 
-  rv, err := c.Send(req)
-  if err != nil {
-    log.Fatal("Error sending request: %v", err)
-  }
+	rv, err := c.Send(req)
+	if err != nil {
+		log.Fatal("Error sending request: %v", err)
+	}
 
-  if rv != nil {
-    log.Print("Response payload: %s", rv.Payload)
-  }
+	if rv != nil {
+		log.Print("Response payload: %s", rv.Payload)
+	}
 }
