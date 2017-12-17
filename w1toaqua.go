@@ -4,7 +4,8 @@ import(
   "fmt"
   "io/ioutil"
   "log"
-  "os/exec" 
+  "os"
+  "os/exec"
   "strconv"
   "strings"
   "time"
@@ -36,6 +37,12 @@ const devicesPath = "/sys/bus/w1/devices/"
 
 func main(){
 
+  var publishingURL string
+
+  if len(os.Args) > 1{
+    publishingURL = os.Args[1]
+  }
+
   for{
 
     var deviceIDs []string
@@ -65,8 +72,11 @@ func main(){
 	  celsius := f * 0.1
 
 	  temp := strconv.FormatFloat(celsius, 'f', 1, 64)
-          fmt.Println(temp)
-         sendMeasure(deviceID, "temperature", temp)
+	  if publishingURL != ""{
+            sendMeasure(publishingURL, deviceID, "temperature", temp)
+          }else{
+             fmt.Println(deviceID + ": " + temp + " C" ) 
+	  }
   } else {
           fmt.Print("cannot read data")
         }
@@ -77,22 +87,19 @@ func main(){
   }
 }
 
-func sendMeasure(deviceID string, measure string, value string){
+func sendMeasure(url string, deviceID string, measure string, value string){
 
   req := coap.Message{
       Type:      coap.NonConfirmable,
       Code:      coap.POST,
-      MessageID: 12345,
       Payload:   []byte(value),
   }
 
   path := "/aqua/" + deviceID + "/" + measure + "/"
 
-  req.SetOption(coap.ETag, "weetag")
-  req.SetOption(coap.MaxAge, 3)
   req.SetPathString(path)
 
-  c, err := coap.Dial("udp", "192.168.0.45:5683")
+  c, err := coap.Dial("udp", url)
   if err != nil {
 	log.Fatal("Error dialing: %v", err)
   }
