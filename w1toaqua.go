@@ -19,16 +19,6 @@ func check(e error) {
 	}
 }
 
-func loadw1kos() {
-	cmd1 := exec.Command("modprobe", "w1-gpio")
-	err1 := cmd1.Run()
-	check(err1)
-	cmd2 := exec.Command("modprobe", "w1-therm")
-	err2 := cmd2.Run()
-	check(err2)
-
-}
-
 const devicesPath = "/sys/bus/w1/devices/"
 
 func main() {
