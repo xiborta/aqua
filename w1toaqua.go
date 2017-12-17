@@ -3,7 +3,8 @@ package main
 import(
   "fmt"
   "io/ioutil"
-  "log" 
+  "log"
+  "os/exec" 
   "strconv"
   "strings"
   "time"
@@ -18,6 +19,17 @@ func check(e error){
     panic(e)
   }
 }
+
+func loadw1kos(){
+  cmd1 := exec.Command("modprobe", "w1-gpio")
+  err1 := cmd1.Run()
+  check(err1)
+  cmd2 := exec.Command("modprobe", "w1-therm")
+  err2 := cmd2.Run()
+  check(err2)
+
+}
+
 
 const devicesPath = "/sys/bus/w1/devices/"
 
