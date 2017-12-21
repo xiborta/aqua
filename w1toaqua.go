@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,6 +25,7 @@ func main() {
 
 	if len(os.Args) > 1 {
 		publishingURL = os.Args[1]
+		log.Println("Will send data to: " + publishingURL)
 	}
 
 	for {
@@ -47,7 +47,7 @@ func main() {
 			sample := string(data)
 
 			if strings.Contains(sample, "NO") {
-				fmt.Print(string(data))
+				log.Print(sample)
 			} else {
 				pos := strings.Index(sample, "t=")
 				if pos >= 0 {
@@ -60,10 +60,10 @@ func main() {
 					if publishingURL != "" {
 						sendMeasure(publishingURL, deviceID, "temperature", temp)
 					} else {
-						fmt.Println(deviceID + ": " + temp + " C")
+						log.Println(deviceID + ": " + temp + " C")
 					}
 				} else {
-					fmt.Print("cannot read data")
+					log.Print("Cannot read data: " + sample + " from device: " + deviceID)
 				}
 			}
 		}
