@@ -43,7 +43,7 @@ func startCoap(coapPort string) {
 
 	log.Printf("installing /aqua/ handler ...")
 
-	log.Fatal(coap.ListenAndServe("udp", ":"+coapPort, mux))
+	log.Fatal(coap.ListenAndServe("udp", ":" + coapPort, mux))
 }
 
 func main() {
