@@ -1,17 +1,16 @@
 package main
 
 import (
-
-        "bytes"
-        "crypto/tls"
-        "encoding/json"
-        "flag"
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
-        "net/http"
 )
 
 func check(e error) {
@@ -23,15 +22,14 @@ func check(e error) {
 const devicesPath = "/sys/bus/w1/devices/"
 
 var (
-        certFile = flag.String("cert", "someCertFile", "A PEM eoncoded certificate file.")
-        keyFile  = flag.String("key", "someKeyFile", "A PEM encoded private key file.")
-        topic = flag.String("topic", "the aws iot publishing endpoint", "the aws iot publishing endpoint URL.")
+	certFile = flag.String("cert", "someCertFile", "A PEM eoncoded certificate file.")
+	keyFile  = flag.String("key", "someKeyFile", "A PEM encoded private key file.")
+	topic    = flag.String("topic", "the aws iot publishing endpoint", "the aws iot publishing endpoint URL.")
 )
-
 
 func main() {
 
-        flag.Parse()
+	flag.Parse()
 
 	for {
 
@@ -79,27 +77,27 @@ func main() {
 
 func sendMeasure(deviceID string, measure string, value string) {
 
-        cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
-        if err != nil {
-                log.Fatal(err)
-        }
+	cert, err := tls.LoadX509KeyPair(*certFile, *keyFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-        // Setup HTTPS client
-        tlsConfig := &tls.Config{
-                Certificates: []tls.Certificate{cert},
-        }
-        tlsConfig.BuildNameToCertificate()
-        transport := &http.Transport{TLSClientConfig: tlsConfig}
-        client := &http.Client{Transport: transport}
+	// Setup HTTPS client
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+	tlsConfig.BuildNameToCertificate()
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: transport}
 
-        values := map[string]string{"ts": "now", measure: value}
+	values := map[string]string{"ts": "now", measure: value}
 
-        jsonValue, _ := json.Marshal(values)
+	jsonValue, _ := json.Marshal(values)
 
-        // POST to aws topic
-        resp, err := client.Post(*topic, "application/json", bytes.NewBuffer(jsonValue))
-        if err != nil {
-                log.Print(err)
-        }
-        defer resp.Body.Close()	
+	// POST to aws topic
+	resp, err := client.Post(*topic, "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		log.Print(err)
+	}
+	defer resp.Body.Close()
 }
