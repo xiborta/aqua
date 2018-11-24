@@ -25,8 +25,7 @@ const devicesPath = "/sys/bus/w1/devices/"
 var (
         certFile = flag.String("cert", "someCertFile", "A PEM eoncoded certificate file.")
         keyFile  = flag.String("key", "someKeyFile", "A PEM encoded private key file.")
-	topic = flag.String("topic", "the aws iot publishing endpoint", "the aws iot publishing endpoint URL.")
-
+        topic = flag.String("topic", "the aws iot publishing endpoint", "the aws iot publishing endpoint URL.")
 )
 
 
@@ -97,7 +96,7 @@ func sendMeasure(deviceID string, measure string, value string) {
 
         jsonValue, _ := json.Marshal(values)
 
-        // Do GET something
+        // POST to aws topic
         resp, err := client.Post(*topic, "application/json", bytes.NewBuffer(jsonValue))
         if err != nil {
                 log.Print(err)
